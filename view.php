@@ -64,5 +64,6 @@ $PAGE->set_context($modulecontext);
 $renderer = $PAGE->get_renderer('mod_edugame');
 
 echo $OUTPUT->header();
-echo $renderer->render_game();
+echo $renderer->render_game($moduleinstance, $modulecontext );
+//$PAGE->requires->js_call_amd('mod_edugame/game', 'init');
 echo $OUTPUT->footer();

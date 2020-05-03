@@ -38,12 +38,21 @@ function xmldb_edugame_upgrade($oldversion) {
 
     $dbman = $DB->get_manager();
 
-    // For further information please read the Upgrade API documentation:
-    // https://docs.moodle.org/dev/Upgrade_API
-    //
-    // You will also have to create the db/install.xml file by using the XMLDB Editor.
-    // Documentation for the XMLDB Editor can be found at:
-    // https://docs.moodle.org/dev/XMLDB_editor
+    if ($oldversion < 2020042801) {
+
+        // Define field questioncategory to be added to edugame.
+        $table = new xmldb_table('edugame');
+        $field = new xmldb_field('questioncategory', XMLDB_TYPE_TEXT, null, null, null, null, null, 'introformat');
+
+        // Conditionally launch add field questioncategory.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Edugame savepoint reached.
+        upgrade_mod_savepoint(true, 2020042801, 'edugame');
+    }
+
 
     return true;
 }

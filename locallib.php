@@ -24,6 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+
 /**
  * Handle the \core\event\something_else_happened event.
  *
@@ -31,4 +32,18 @@ defined('MOODLE_INTERNAL') || die();
  */
 function local_test_locallib_function($event) {
     return;
+}
+
+/**
+ * Function to prepare strings to be printed out as JSON.
+ *
+ * @param stdClass $string The string to be cleaned
+ * @return string The string, ready to be printed as JSON
+ */
+function edugame_cleanup($string) {
+    $string = strip_tags($string);
+    $string = preg_replace('/"/', '\"', $string);
+    $string = preg_replace('/[\n\r]/', ' ', $string);
+    $string = stripslashes($string);
+    return $string;
 }

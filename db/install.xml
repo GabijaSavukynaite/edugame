@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="mod/edugame/db" VERSION="20200417" COMMENT="XMLDB file for Moodle mod_edugame"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
->
+<XMLDB PATH="mod/edugame/db" VERSION="20200417" COMMENT="XMLDB file for Moodle mod_edugame" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
   <TABLES>
     <TABLE NAME="edugame" COMMENT="Stores the edugame activity module instances.">
       <FIELDS>

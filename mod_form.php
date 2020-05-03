@@ -25,6 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot.'/course/moodleform_mod.php');
+require_once($CFG->dirroot.'/lib/questionlib.php');
 
 /**
  * Module instance settings form.
@@ -39,7 +40,7 @@ class mod_edugame_mod_form extends moodleform_mod {
      * Defines forms elements
      */
     public function definition() {
-        global $CFG;
+        global $CFG, $COURSE;
 
         $mform = $this->_form;
 
@@ -58,6 +59,12 @@ class mod_edugame_mod_form extends moodleform_mod {
         $mform->addRule('name', null, 'required', null, 'client');
         $mform->addRule('name', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
         $mform->addHelpButton('name', 'edugamename', 'mod_edugame');
+
+        $context = context_course::instance($COURSE->id);
+        $categories = question_category_options(array($context), false, 0);
+
+        $mform->addElement('selectgroups', 'questioncategory', get_string('questioncategory', 'edugame'), $categories);
+        $mform->addHelpButton('questioncategory', 'questioncategory', 'edugame');
 
         // Adding the standard "intro" and "introformat" fields.
         if ($CFG->branch >= 29) {
