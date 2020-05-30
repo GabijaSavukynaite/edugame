@@ -2,14 +2,13 @@
 // You can call it anything you like
 require.config({
     paths: {
-        "Three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min",
         "Phaser": "https://cdnjs.cloudflare.com/ajax/libs/phaser/3.22.0/phaser.min"
     }
 });
 
 // https://phaser.discourse.group/t/is-it-possible-to-use-phaser-3-with-amd-requirejs-and-typescript/2961/5
 
-define(['Three', 'Phaser', 'jquery', 'core/yui', 'core/notification', 'core/ajax'], function (Three, Phaser, $, Y, notification, ajax) {
+define(['Phaser', 'jquery', 'core/yui', 'core/notification', 'core/ajax'], function (Phaser, $, Y, notification, ajax) {
 
     return {
         init: function (q, qid) {
@@ -33,41 +32,43 @@ define(['Three', 'Phaser', 'jquery', 'core/yui', 'core/notification', 'core/ajax
                 parent: "mod_edugame_game"
             };
 
-            var game = new Phaser.Game(config);
+            new Phaser.Game(config);
 
-            var testQuestions = q;
-            var gameId = qid;
+            var questions = q;
+            var edugameId = qid;
             var clouds;
+            var player;
+            var cursors;
             var score = 0;
             var scoreText;
-            var questionText;
+            //var questionText;
             var answersText = [];
-            var level = 1;
+            //var level = 1;
 
 
-            var questions = [
-                {
-                    question: "klausimas1 ", answers: [
-                        { answer: "atsakymas1" },
-                        { answer: "atsakymas2" },
-                        { answer: "atsakymas3" }
-                    ]
-                },
-                {
-                    question: "klausimas2 ", answers: [
-                        { answer: "atsakymas4" },
-                        { answer: "atsakymas5" },
-                        { answer: "atsakymas6" }
-                    ]
-                },
-                {
-                    question: "klausimas3 ", answers: [
-                        { answer: "atsakymas7" },
-                        { answer: "atsakymas8" },
-                        { answer: "atsakymas9" }
-                    ]
-                }
-            ]
+            // var questions = [
+            //     {
+            //         question: "klausimas1 ", answers: [
+            //             { answer: "atsakymas1" },
+            //             { answer: "atsakymas2" },
+            //             { answer: "atsakymas3" }
+            //         ]
+            //     },
+            //     {
+            //         question: "klausimas2 ", answers: [
+            //             { answer: "atsakymas4" },
+            //             { answer: "atsakymas5" },
+            //             { answer: "atsakymas6" }
+            //         ]
+            //     },
+            //     {
+            //         question: "klausimas3 ", answers: [
+            //             { answer: "atsakymas7" },
+            //             { answer: "atsakymas8" },
+            //             { answer: "atsakymas9" }
+            //         ]
+            //     }
+            // ]
 
             function preload() {
                 this.load.image('sky', 'pix/Background.png');
@@ -77,14 +78,15 @@ define(['Three', 'Phaser', 'jquery', 'core/yui', 'core/notification', 'core/ajax
 
             function create() {
                 this.add.image(400, 300, 'sky');
-                console.log("klausimasi " + testQuestions.length + " " + testQuestions)
+
                 clouds = this.physics.add.staticGroup();
 
                 var position = 50;
                 for (var i = 0; i < questions[0].answers.length; i++) {
                     clouds.create(position, 50, 'cloud');
-                    answersText.push(this.add.text(position, 0, questions[0].answers[i].answer, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' }))
-                    position += 280
+                    answersText.push(this.add.text(position, 0, questions[0].answers[i].answer,
+                        { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' }));
+                    position += 280;
                 }
 
                 player = this.physics.add.sprite(100, 450, 'player', 'character/run/05.png');
@@ -92,7 +94,8 @@ define(['Three', 'Phaser', 'jquery', 'core/yui', 'core/notification', 'core/ajax
                 player.setBounce(0.2);
                 player.setCollideWorldBounds(true);
 
-                questionText = this.add.text(0, 0, questions[0].question, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' });
+                // questionText = this.add.text(0, 0, questions[0].question,
+                //     { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' });
 
 
                 const frameNames = [
@@ -102,10 +105,10 @@ define(['Three', 'Phaser', 'jquery', 'core/yui', 'core/notification', 'core/ajax
                     { key: 'player', frame: 'character/run/03.png' },
                     { key: 'player', frame: 'character/run/04.png' },
                     { key: 'player', frame: 'character/run/05.png' },
-                ]
+                ];
                 this.anims.create({ key: 'walk', frames: frameNames, frameRate: 20 });
                 this.physics.add.overlap(player, clouds, touchCloud, null, this);
-                scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', fill: '#000' });
+                scoreText = this.add.text(16, 16, 'score: 4', { fontSize: '32px', fill: '#000' });
             }
 
             function update() {
@@ -131,22 +134,40 @@ define(['Three', 'Phaser', 'jquery', 'core/yui', 'core/notification', 'core/ajax
             }
 
             function touchCloud(player, cloud) {
+                console.log("touchCloud"); // eslint-disable-line no-console
                 cloud.disableBody(true, true);
 
-                score += 10;
+                score += 15;
                 scoreText.setText('Score: ' + score);
-                level++;
-                questionText = this.add.text(0, 0, questions[level - 1].question, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' });
-                for (var i in answersText) {
-                    answersText[i].destroy();
-                }
-                answersText = []
-                var position = 50
-                for (var i in questions[level - 1].answers) {
-                    answersText.push(this.add.text(position, 0, questions[level - 1].answers[i].answer, { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' }))
-                    position += 280
-                }
+                // level++;
+                // if (level > questions.length) {
+                endGame();
+                // }
+                // else {
+                //     questionText = this.add.text(0, 0, questions[level - 1].question,
+                // { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' });
+                //     for (var i in answersText) {
+                //         answersText[i].destroy();
+                //     }
+                //     answersText = []
+                //     var position = 50
+                //     for (var i in questions[level - 1].answers) {
+                //         answersText.push(this.add.text(position, 0, questions[level - 1].answers[i].answer,
+                // { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' }))
+                //         position += 280
+                //     }
+                // }
             }
+
+            function endGame() {
+                console.log("endGame id: " + edugameId);// eslint-disable-line no-console
+                ajax.call([{
+                    methodname: 'mod_edugame_add_score',
+                    args: { edugameid: edugameId, score: score },
+                    fail: notification.exception
+                }]);
+            }
+
         }
     };
 });
