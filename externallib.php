@@ -26,7 +26,7 @@ class mod_edugame_external extends external_api {
         $params = array();
         $params['itemname'] = clean_param($edugame->name, PARAM_NOTAGS);
         $params['gradetype'] = GRADE_TYPE_VALUE;
-        $params['grademax']  = 100;
+        $params['grademax']  = 10;
         $params['grademin']  = 0;
 
         $grades = array (

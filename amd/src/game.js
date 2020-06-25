@@ -6,12 +6,336 @@ require.config({
     }
 });
 
-// https://phaser.discourse.group/t/is-it-possible-to-use-phaser-3-with-amd-requirejs-and-typescript/2961/5
-
 define(['Phaser', 'jquery', 'core/yui', 'core/notification', 'core/ajax'], function (Phaser, $, Y, notification, ajax) {
 
     return {
         init: function (q, qid) {
+
+            class Cloud extends Phaser.Physics.Arcade.Sprite {
+                constructor(scene, x, y, fraction, index) {
+                    super(scene, x, y, fraction, index);
+                    this.fraction = fraction;
+                    this.index = index;
+
+                    this.setTexture('cloud');
+                    this.setPosition(x, y);
+                    scene.add.existing(this);
+                    scene.physics.add.existing(this, true);
+
+                }
+            }
+
+            class GameScreen extends Phaser.Scene {
+                constructor(data) {
+                    super('GameScreen');
+                    this.questions;
+                    this.edugameId;
+                    this.clouds;
+                    this.ground;
+                    this.player;
+                    this.cursors;
+                    this.score = 0;
+                    this.scoreText;
+                    this.questionText;
+                    this.answersText = [];
+                    this.level = 1;
+                    this.corretMultipleAnswers = [];
+                    this.showNewQuestion = false;
+                    this.collider
+                }
+                init(data) {
+                    this.questions = data.questions;
+                    this.edugameId = data.edugameId;
+                }
+
+                preload() {
+
+                }
+
+                create() {
+                    this.add.image(400, 300, 'sky');
+
+                    this.clouds = this.add.group();
+                    this.ground = this.add.sprite(400, 555, 'dirt')
+                    this.physics.add.existing(this.ground, true);
+
+                    this.player = this.physics.add.sprite(100, 400, 'player', 'character/idle.png');
+
+                    this.player.setBounce(0.2);
+                    this.player.setCollideWorldBounds(true);
+                    var frameNames = this.anims.generateFrameNames('player', { start: 0, end: 17, prefix: 'character/', suffix: '.png' });
+                    this.anims.create({
+                        key: 'walk',
+                        frames: frameNames,
+                        frameRate: 20
+                    });
+                    this.anims.create({
+                        key: 'idle',
+                        frames: [{ key: 'player', frame: 'character/idle.png' }],
+                        frameRate: 20
+                    });
+                    this.anims.create({
+                        key: 'jump',
+                        frames: [{ key: 'player', frame: 'character/jump.png' }],
+                        frameRate: 20
+                    });
+                    console.log(JSON.stringify(this.questions))
+                    this.physics.add.collider(this.player, this.ground);
+                    //this.physics.add.overlap(this.player, this.clouds, this.touchCloud, null, this);
+                    this.questionText = this.add.text(16, 530, this.questions[this.level - 1].question, { fontSize: "25px", fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' });
+                    this.scoreText = this.add.text(16, 580, 'Rezultatas: 0', { fontSize: '20px', fill: '#fff' });
+
+                    var gap = 800 / this.questions[this.level - 1].answers.length
+                    var position = gap / 2;
+                    if (this.questions[this.level - 1].type == 'truefalse') {
+                        this.clouds.add(new Cloud(this, position, 50, this.questions[0].answers[0].fraction, 0))
+                        this.answersText.push(
+                            this.add.text(position, 50, this.questions[0].answers[0].text == "True" ? "Tiesa" : "Netiesa",
+                                { fontSize: 25, fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' }).setOrigin(0.5),
+
+                        );
+                        position += gap;
+                        this.clouds.add(new Cloud(this, position, 50, this.questions[0].answers[1].fraction, 1))
+                        this.answersText.push(
+                            this.add.text(position, 50, this.questions[0].answers[1].text == "True" ? "Tiesa" : "Netiesa",
+                                { fontSize: 25, fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' }).setOrigin(0.5),
+                        );
+                    }
+                    else {
+                        var i;
+                        for (i = 0; i < this.questions[this.level - 1].answers.length; i++) {
+                            this.clouds.add(new Cloud(this, position, 50, this.questions[this.level - 1].answers[i].fraction, i))
+                            var text = this.add.text(position, 50, this.questions[this.level - 1].answers[i].text, { fontSize: "25px", fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
+                            text.setOrigin(0.5);
+                            this.answersText.push(text)
+
+                            if (this.questions[this.level - 1].answers[i].fraction > 0) {
+                                this.corretMultipleAnswers.push(i);
+                            }
+                            position += gap;
+                        }
+                    }
+                }
+                update() {
+                    this.cursors = this.input.keyboard.createCursorKeys();
+                    if (this.cursors.left.isDown) {
+                        this.player.setFlipX(true);
+                        this.player.setVelocityX(-200);
+                        this.player.anims.play('walk', true);
+
+                    }
+                    else if (this.cursors.right.isDown) {
+                        this.player.setFlipX(false);
+                        this.player.setVelocityX(200);
+                        this.player.anims.play('walk', true);
+                    }
+                    else if (this.cursors.up.isDown && this.player.body.blocked.down) {
+                        this.player.setVelocityY(-600);
+                        this.player.anims.play('jump', true);
+                    }
+                    else {
+                        this.player.setVelocityX(0);
+                        this.player.anims.play('idle', true);
+                    }
+
+                    if (this.showNewQuestion) {
+                        this.showNewQuestion = false;
+                        this.time.addEvent({
+                            delay: 1000,
+                            callback: () => {
+
+                                this.clouds.clear(true, true);
+                                this.questionText.setText(this.questions[this.level - 1].question);
+                                for (var i in this.answersText) {
+                                    this.answersText[i].destroy();
+                                }
+                                this.answersText = [];
+                                this.corretMultipleAnswers = [];
+
+                                var gap = 800 / this.questions[this.level - 1].answers.length
+                                var position = gap / 2;
+                                if (this.questions[this.level - 1].type == 'truefalse') {
+                                    this.clouds.add(new Cloud(this, position, 50, this.questions[0].answers[0].fraction, 0))
+                                    this.answersText.push(
+                                        this.add.text(position, 50, this.questions[0].answers[0].text == "True" ? "Tiesa" : "Netiesa",
+                                            { fontSize: 25, fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' }).setOrigin(0.5),
+                                    );
+                                    position += gap;
+                                    this.clouds.add(new Cloud(this, position, 50, this.questions[0].answers[1].fraction, 1))
+                                    this.answersText.push(
+                                        this.add.text(position, 50, this.questions[0].answers[1].text == "True" ? "Tiesa" : "Netiesa",
+                                            { fontSize: 25, fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' }).setOrigin(0.5),
+                                    );
+                                }
+                                else {
+                                    var i;
+                                    for (i = 0; i < this.questions[this.level - 1].answers.length; i++) {
+                                        this.clouds.add(new Cloud(this, position, 50, this.questions[this.level - 1].answers[i].fraction, i))
+                                        var text = this.add.text(position, 50, this.questions[this.level - 1].answers[i].text, { fontSize: "25px", fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' })
+                                        text.setOrigin(0.5);
+                                        this.answersText.push(text)
+
+                                        if (this.questions[this.level - 1].answers[i].fraction > 0) {
+                                            this.corretMultipleAnswers.push(i);
+                                        }
+
+                                        position += gap;
+                                    }
+                                }
+                                this.clouds.enableBody = true;
+                                // if (this.collider != null) {
+                                //     this.collider.destroy();
+                                // }
+                            },
+                            loop: true
+                        })
+                    }
+
+                    this.collider = this.physics.add.overlap(this.player, this.clouds, function (player, cloud) {
+                        this.answersText[cloud.index].destroy()
+                        this.score += parseFloat(cloud.fraction);
+                        cloud.destroy();
+                        this.scoreText.setText('Rezultatas: ' + this.score);
+                        if (this.corretMultipleAnswers.length > 1) {
+                            var answerIndex = this.corretMultipleAnswers.findIndex(answerIndex => answerIndex == cloud.index);
+                            this.corretMultipleAnswers = this.corretMultipleAnswers.splice(answerIndex, 1);
+                        }
+                        else {
+                            this.showNewQuestion = true;
+                        }
+                        if (this.questions[this.level - 1].type == "multichoice" && this.corretMultipleAnswers.length > 0 && cloud.fraction > 0) {
+                            if (this.corretMultipleAnswers.length == 1) {
+                                this.showNewQuestion = true;
+                            }
+                            else {
+                                var answerIndex = this.corretMultipleAnswers.findIndex(answerIndex => answerIndex == cloud.index);
+                                this.corretMultipleAnswers = this.corretMultipleAnswers.splice(answerIndex, 1);
+                            }
+                        }
+                        else {
+                            if (this.level >= this.questions.length) {
+                                this.endGame();
+                            }
+                            else {
+                                this.level++;
+                                this.showNewQuestion = true;
+                            }
+                        }
+                    }, null, this)
+                }
+
+                // touchCloud(player, cloud) {
+                //     this.answersText[cloud.index].destroy()
+                //     this.score += parseFloat(cloud.fraction);
+                //     cloud.destroy();
+                //     this.scoreText.setText('Rezultatas: ' + this.score);
+                //     if (this.corretMultipleAnswers.length > 1) {
+                //         var answerIndex = this.corretMultipleAnswers.findIndex(answerIndex => answerIndex == cloud.index);
+                //         this.corretMultipleAnswers = this.corretMultipleAnswers.splice(answerIndex, 1);
+                //     }
+                //     else {
+                //         this.showNewQuestion = true;
+                //     }
+                //     if (this.questions[this.level - 1].type == "multichoice" && this.corretMultipleAnswers.length > 0 && cloud.fraction > 0) {
+                //         if (this.corretMultipleAnswers.length == 1) {
+                //             this.showNewQuestion = true;
+                //         }
+                //         else {
+                //             var answerIndex = this.corretMultipleAnswers.findIndex(answerIndex => answerIndex == cloud.index);
+                //             this.corretMultipleAnswers = this.corretMultipleAnswers.splice(answerIndex, 1);
+                //         }
+                //     }
+
+                //     else {
+                //         console.log("level " + this.level + " " + this.questions.length)
+                //         if (this.level >= this.questions.length) {
+                //             this.endGame();
+                //         }
+                //         else {
+                //             this.showNewQuestion = true;
+                //         }
+                //     }
+                // }
+
+                endGame() {
+                    ajax.call([{
+                        methodname: 'mod_edugame_add_score',
+                        args: { edugameid: this.edugameId, score: Math.trunc(this.score) },
+                        fail: notification.exception
+                    }]);
+                    this.scene.start('ResultScreen',
+                        {
+                            questions: this.questions,
+                            edugameId: this.edugameId,
+                            score: this.score
+                        })
+                }
+            }
+
+            class StartScreen extends Phaser.Scene {
+                constructor() {
+                    super('StartScreen');
+                }
+
+                preload() {
+                    this.load.image('startGameButton', 'pix/gui/startGameIcon.png');
+                    this.load.image('sky', 'pix/background.png');
+                    this.load.image('cloud', 'pix/cloud.png');
+                    this.load.multiatlas('player', 'pix/character.json', 'pix');
+                    this.load.image('dirt', 'pix/dirt.png');
+                }
+
+                create(data) {
+                    var button = this.add.image(400, 300, 'startGameButton')
+                    button.setInteractive();
+                    this.input.on('pointerup', function (pointer) {
+                        this.scene.start('GameScreen', data);
+                    }, this);
+                }
+
+                update() {
+
+                }
+
+            }
+
+            class ResultScreen extends Phaser.Scene {
+                constructor() {
+                    super('ResultScreen');
+                    this.score;
+                    this.questions;
+                    this.edugameId;
+                }
+
+                init(data) {
+                    this.score = data.score;
+                    this.questions = data.questions;
+                    this.edugameId = data.edugameId;
+                }
+
+                preload() {
+
+                }
+
+                create() {
+                    var resultText = this.add.text(400, 250, 'Rezultatas: ' + this.score, { fontSize: "25px", fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' });
+                    resultText.setOrigin(0.5);
+                    var button = this.add.image(400, 300, 'startGameButton');
+                    button.setInteractive();
+                    this.input.on('pointerup', function (pointer) {
+                        this.scene.start('GameScreen',
+                            {
+                                questions: this.questions,
+                                edugameId: this.edugameId,
+                            });
+                    }, this);
+                }
+
+                update() {
+
+                }
+
+            }
 
             var config = {
                 type: Phaser.AUTO,
@@ -24,149 +348,15 @@ define(['Phaser', 'jquery', 'core/yui', 'core/notification', 'core/ajax'], funct
                         debug: false
                     }
                 },
-                scene: {
-                    preload: preload,
-                    create: create,
-                    update: update
-                },
+                scene: [StartScreen, GameScreen, ResultScreen],
                 parent: "mod_edugame_game"
             };
 
-            new Phaser.Game(config);
-
-            var questions = q;
-            var edugameId = qid;
-            var clouds;
-            var player;
-            var cursors;
-            var score = 0;
-            var scoreText;
-            //var questionText;
-            var answersText = [];
-            //var level = 1;
-
-
-            // var questions = [
-            //     {
-            //         question: "klausimas1 ", answers: [
-            //             { answer: "atsakymas1" },
-            //             { answer: "atsakymas2" },
-            //             { answer: "atsakymas3" }
-            //         ]
-            //     },
-            //     {
-            //         question: "klausimas2 ", answers: [
-            //             { answer: "atsakymas4" },
-            //             { answer: "atsakymas5" },
-            //             { answer: "atsakymas6" }
-            //         ]
-            //     },
-            //     {
-            //         question: "klausimas3 ", answers: [
-            //             { answer: "atsakymas7" },
-            //             { answer: "atsakymas8" },
-            //             { answer: "atsakymas9" }
-            //         ]
-            //     }
-            // ]
-
-            function preload() {
-                this.load.image('sky', 'pix/Background.png');
-                this.load.image('cloud', 'pix/gui/cloud.png');
-                this.load.multiatlas('player', 'pix/runner2.json', 'pix');
-            }
-
-            function create() {
-                this.add.image(400, 300, 'sky');
-
-                clouds = this.physics.add.staticGroup();
-
-                var position = 50;
-                for (var i = 0; i < questions[0].answers.length; i++) {
-                    clouds.create(position, 50, 'cloud');
-                    answersText.push(this.add.text(position, 0, questions[0].answers[i].answer,
-                        { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' }));
-                    position += 280;
-                }
-
-                player = this.physics.add.sprite(100, 450, 'player', 'character/run/05.png');
-
-                player.setBounce(0.2);
-                player.setCollideWorldBounds(true);
-
-                // questionText = this.add.text(0, 0, questions[0].question,
-                //     { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' });
-
-
-                const frameNames = [
-                    { key: 'player', frame: 'character/run/05.png' },
-                    { key: 'player', frame: 'character/run/01.png' },
-                    { key: 'player', frame: 'character/run/02.png' },
-                    { key: 'player', frame: 'character/run/03.png' },
-                    { key: 'player', frame: 'character/run/04.png' },
-                    { key: 'player', frame: 'character/run/05.png' },
-                ];
-                this.anims.create({ key: 'walk', frames: frameNames, frameRate: 20 });
-                this.physics.add.overlap(player, clouds, touchCloud, null, this);
-                scoreText = this.add.text(16, 16, 'score: 4', { fontSize: '32px', fill: '#000' });
-            }
-
-            function update() {
-                cursors = this.input.keyboard.createCursorKeys();
-                if (cursors.left.isDown) {
-                    player.setFlipX(true);
-                    player.setVelocityX(-200);
-                    player.anims.play('walk', true);
-
-                }
-                else if (cursors.right.isDown) {
-                    player.setFlipX(false);
-                    player.setVelocityX(200);
-                    player.anims.play('walk', true);
-                }
-                else {
-                    player.setVelocityX(0);
-                }
-
-                if (cursors.up.isDown && player.body.blocked.down) {
-                    player.setVelocityY(-730);
-                }
-            }
-
-            function touchCloud(player, cloud) {
-                console.log("touchCloud"); // eslint-disable-line no-console
-                cloud.disableBody(true, true);
-
-                score += 15;
-                scoreText.setText('Score: ' + score);
-                // level++;
-                // if (level > questions.length) {
-                endGame();
-                // }
-                // else {
-                //     questionText = this.add.text(0, 0, questions[level - 1].question,
-                // { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' });
-                //     for (var i in answersText) {
-                //         answersText[i].destroy();
-                //     }
-                //     answersText = []
-                //     var position = 50
-                //     for (var i in questions[level - 1].answers) {
-                //         answersText.push(this.add.text(position, 0, questions[level - 1].answers[i].answer,
-                // { fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif' }))
-                //         position += 280
-                //     }
-                // }
-            }
-
-            function endGame() {
-                console.log("endGame id: " + edugameId);// eslint-disable-line no-console
-                ajax.call([{
-                    methodname: 'mod_edugame_add_score',
-                    args: { edugameid: edugameId, score: score },
-                    fail: notification.exception
-                }]);
-            }
+            const game = new Phaser.Game(config);
+            game.scene.start('StartScreen', {
+                questions: q,
+                edugameId: qid
+            })
 
         }
     };

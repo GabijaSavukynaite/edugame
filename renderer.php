@@ -45,18 +45,21 @@ class mod_edugame_renderer extends plugin_renderer_base {
         $categoryid = explode(',', $edugame->questioncategory)[0];
         $questionids = array_keys($DB->get_records('question', array('category' => intval($categoryid)), '', 'id'));
         $questions = question_load_questions($questionids);
-
         $qjson = [];
         foreach ($questions as $question) {
-            if ($question->qtype == "truefalse") {
+            if (($question->qtype == "multichoice" && sizeof($question->options->answers) <= 4) || $question->qtype == "truefalse" ) {
                 $questiontext = edugame_cleanup($question->questiontext);
                 $answers = [];
                 foreach ($question->options->answers as $answer) {
                     $answertext = edugame_cleanup($answer->answer);
                     $answers[] = ["text" => $answertext, "fraction" => $answer->fraction];
                 }
-
-                $qjson[] = ["question" => $questiontext, "answers" => $answers, "type" => $question->qtype];
+                if ($question->qtype == "truefalse") {
+                    $qjson[] = ["question" => $questiontext, "answers" => $answers, "type" => $question->qtype];
+                } else {
+                    $qjson[] = ["question" => $questiontext, "answers" => $answers, "type" => $question->qtype,
+                        "single" => $question->qtype == "multichoice" && $question->options->single == 1];
+                }
             }
         }
 

@@ -26,6 +26,6 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'mod_edugame';
 $plugin->release = '0.1.0';
-$plugin->version = 2020052900;
-$plugin->requires = 2019052000;
+$plugin->version = 2020062407;
+$plugin->requires = 2015111600;
 $plugin->maturity = MATURITY_ALPHA;
